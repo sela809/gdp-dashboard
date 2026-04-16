@@ -1,10 +1,11 @@
 import streamlit as st
 import pandas as pd
+from datetime import datetime, timedelta
 
-# 1. إعدادات الصفحة
+# 1. إعدادات الصفحة الأساسية
 st.set_page_config(page_title="منظومة الإدارة الذكية", layout="wide", page_icon="🏭")
 
-# 2. تهيئة الذاكرة (Session State)
+# 2. تهيئة الذاكرة الشاملة (Session State) - لازم تكون في الأول
 if 'machines' not in st.session_state:
     st.session_state.machines = pd.DataFrame([
         {"الماكينة": "ماكينة طباعة 1", "الحالة": "✅ تعمل"},
@@ -14,135 +15,73 @@ if 'machines' not in st.session_state:
 if 'production_log' not in st.session_state:
     st.session_state.production_log = pd.DataFrame(columns=["التوقيت", "الماكينة", "الكمية المنتج", "الهالك"])
 
-# العنوان الرئيسي
-st.markdown("<h1 style='text-align: center; color: #1E88E5;'>🏭 نظام توزيع الأدوار والرقابة</h1>", unsafe_allow_html=True)
-
-tabs = st.tabs(["🏠 الرئيسية", "🏗️ مدير الإنتاج", "🔧 مدير الصيانة", "📦 مدير المخزن"])
-
-import streamlit as st
-import pandas as pd
-from datetime import datetime, timedelta
-
-# 1. تهيئة بيانات الصيانة في الذاكرة
 if 'maintenance_logs' not in st.session_state:
     st.session_state.maintenance_logs = pd.DataFrame(columns=["الماكينة", "نوع الصيانة", "التاريخ", "الفني المسؤول", "التكلفة"])
 
-# 2. بيانات افتراضية لتوقعات الأعطال (تجريبي)
 if 'machine_health' not in st.session_state:
     st.session_state.machine_health = {
-        "ماكينة طباعة 1": {"آخر_صيانة": "2026-04-01", "عمر_القطعة_افتراضي": 30, "حالة_السير": 85},
-        "مكبس تجميع": {"آخر_صيانة": "2026-03-15", "عمر_القطعة_افتراضي": 60, "حالة_السير": 40}
+        "ماكينة طباعة 1": {"آخر_صيانة": "2026-04-01", "عمر_القطعة_افتراضي": 30},
+        "مكبس تجميع": {"آخر_صيانة": "2026-03-15", "عمر_القطعة_افتراضي": 60}
     }
 
-# --- داخل تبويب مدير الصيانة ---
-with tabs[2]:
-    st.header("🔧 مركز قيادة الصيانة الذكي")
-    
-    # أولاً: رادار توقع الأعطال (Predictive Maintenance)
-    st.subheader("🔮 رادار توقع الأعطال (تحليل ذكي)")
-    cols = st.columns(len(st.session_state.machine_health))
-    
-    for i, (m_name, m_data) in enumerate(st.session_state.machine_health.items()):
-        last_date = datetime.strptime(m_data["آخر_صيانة"], "%2026-%m-%d")
-        next_date = last_date + timedelta(days=m_data["عمر_القطعة_افتراضي"])
-        days_left = (next_date - datetime.now()).days
-        
-        with cols[i]:
-            if days_left <= 5:
-                st.error(f"⚠️ {m_name}\n\nخطر: صيانة مطلوبة خلال {days_left} أيام!")
-            else:
-                st.success(f"✅ {m_name}\n\nمستقرة: فاضل {days_left} يوم")
+# العنوان الرئيسي
+st.markdown("<h1 style='text-align: center; color: #1E88E5;'>🏭 نظام الإدارة المتكامل (النسخة المصححة)</h1>", unsafe_allow_html=True)
 
-    st.write("---")
+# 3. إنشاء التبويبات مرة واحدة فقط
+tabs = st.tabs(["🏠 الرئيسية", "🏗️ مدير الإنتاج", "🔧 مدير الصيانة", "📦 مدير المخزن"])
 
-    # ثانياً: تسجيل صيانة جديدة
-    st.subheader("📝 تسجيل عملية صيانة/تصليح")
-    col_a, col_b = st.columns(2)
-    with col_a:
-        m_select = st.selectbox("الماكينة:", list(st.session_state.machine_health.keys()))
-        m_type = st.radio("نوع العملية:", ["صيانة دورية", "إصلاح عطل طارئ", "تغيير قطع غيار"])
-    with col_b:
-        m_tech = st.text_input("الفني المسؤول:")
-        m_cost = st.number_input("تكلفة قطع الغيار (ج.م):", min_value=0)
-
-    if st.button("💾 حفظ في سجل الصيانة"):
-        new_log = {
-            "الماكينة": m_select,
-            "نوع الصيانة": m_type,
-            "التاريخ": datetime.now().strftime("%Y-%m-%d"),
-            "الفني المسؤول": m_tech,
-            "التكلفة": m_cost
-        }
-        st.session_state.maintenance_logs = pd.concat([st.session_state.maintenance_logs, pd.DataFrame([new_log])], ignore_index=True)
-        # تحديث تاريخ آخر صيانة في الرادار
-        st.session_state.machine_health[m_select]["آخر_صيانة"] = datetime.now().strftime("%Y-%m-%d")
-        st.success(f"تم تحديث بيانات {m_select} بنجاح!")
-
-    st.write("---")
-    
-    # ثالثاً: سجل الصيانة التاريخي
-    st.subheader("📜 أرشيف الصيانة والتكاليف")
-    st.dataframe(st.session_state.maintenance_logs, use_container_width=True)
-    
-    # رابعاً: إحصائية لمدير الصيانة
-    total_m_cost = st.session_state.maintenance_logs["التكلفة"].sum()
-    st.metric("إجمالي إنفاق الصيانة هذا الشهر", f"{total_m_cost} ج.م")
-    
-# --- التبويب 1: الرئيسية (عرض شامل) ---
+# --- التبويب 1: الرئيسية ---
 with tabs[0]:
     st.subheader("📊 تقرير الأداء العام")
     col1, col2 = st.columns(2)
     col1.metric("إجمالي الماكينات", len(st.session_state.machines))
     col2.metric("إجمالي إنتاج اليوم", f"{st.session_state.production_log['الكمية المنتج'].sum()} قطعة")
-    
-    st.write("---")
-    st.write("📍 **حالة الماكينات الآن:**")
     st.table(st.session_state.machines)
 
-# --- التبويب 2: مدير الإنتاج (زيادة الإنتاج فقط) ---
+# --- التبويب 2: مدير الإنتاج ---
 with tabs[1]:
     st.header("🏗️ تسجيل الإنتاج اليومي")
-    # مدير الإنتاج بيختار من الماكينات اللي ضافها مدير الصيانة
-    selected_m = st.selectbox("اختر الماكينة التي أنتجت:", st.session_state.machines['الماكينة'])
-    p_amount = st.number_input("الكمية المنتجة (قطعة):", min_value=0, step=1)
-    p_waste = st.number_input("كمية الهالك (قطعة):", min_value=0, step=1)
-    
+    selected_m = st.selectbox("اختر الماكينة:", st.session_state.machines['الماكينة'], key="prod_select")
+    p_amount = st.number_input("الكمية المنتجة:", min_value=0, step=1)
     if st.button("➕ تسجيل الإنتاج"):
-        new_entry = {
-            "التوقيت": pd.Timestamp.now().strftime("%H:%M:%S"),
-            "الماكينة": selected_m,
-            "الكمية المنتج": p_amount,
-            "الهالك": p_waste
-        }
+        new_entry = {"التوقيت": datetime.now().strftime("%H:%M:%S"), "الماكينة": selected_m, "الكمية المنتج": p_amount, "الهالك": 0}
         st.session_state.production_log = pd.concat([st.session_state.production_log, pd.DataFrame([new_entry])], ignore_index=True)
-        st.success(f"تم تسجيل إنتاج {p_amount} قطعة من {selected_m}")
+        st.success("تم الحفظ!")
 
-    st.write("---")
-    st.subheader("📋 سجل الإنتاج الأخير")
-    st.dataframe(st.session_state.production_log)
-
-# --- التبويب 3: مدير الصيانة (إضافة/تكهين الماكينات) ---
+# --- التبويب 3: مدير الصيانة (الرادار + الإدارة) ---
 with tabs[2]:
-    st.header("🔧 إدارة الأصول (الماكينات)")
+    st.header("🔧 مركز قيادة الصيانة")
     
-    with st.expander("➕ إضافة ماكينة جديدة للمصنع"):
-        m_name = st.text_input("اسم الماكينة (مثلاً: ماكينة 5)")
-        if st.button("حفظ الماكينة"):
-            new_m = {"الماكينة": m_name, "الحالة": "✅ تعمل"}
-            st.session_state.machines = pd.concat([st.session_state.machines, pd.DataFrame([new_m])], ignore_index=True)
-            st.success(f"تمت إضافة {m_name} للنظام")
+    # رادار التوقعات
+    st.subheader("🔮 توقعات الأعطال")
+    m_cols = st.columns(len(st.session_state.machine_health))
+    for i, (name, data) in enumerate(st.session_state.machine_health.items()):
+        last = datetime.strptime(data["آخر_صيانة"], "%Y-%m-%d")
+        next_m = last + timedelta(days=data["عمر_القطعة_افتراضي"])
+        days_left = (next_m - datetime.now()).days
+        with m_cols[i]:
+            if days_left <= 5: st.error(f"⚠️ {name}: صيانة خلال {days_left} يوم")
+            else: st.success(f"✅ {name}: مستقرة ({days_left} يوم)")
+
+    # تسجيل صيانة
+    with st.expander("📝 تسجيل عملية صيانة"):
+        m_fix = st.selectbox("الماكينة:", list(st.session_state.machine_health.keys()), key="fix_select")
+        cost = st.number_input("التكلفة:", min_value=0)
+        if st.button("💾 حفظ الصيانة"):
+            st.session_state.machine_health[m_fix]["آخر_صيانة"] = datetime.now().strftime("%Y-%m-%d")
+            st.success("تم تحديث الرادار!")
             st.rerun()
 
-    st.write("---")
-    with st.expander("🔴 بيع أو تكهين ماكينة"):
-        m_to_del = st.selectbox("اختر ماكينة للإزالة:", st.session_state.machines['الماكينة'])
-        if st.button("تأكيد الإزالة النهائية"):
-            st.session_state.machines = st.session_state.machines[st.session_state.machines['الماكينة'] != m_to_del]
-            st.warning(f"تم حذف {m_to_del} من النظام")
+    # إضافة/حذف ماكينات
+    with st.expander("⚙️ إعدادات الماكينات (إضافة/تكهين)"):
+        new_m = st.text_input("اسم ماكينة جديدة:")
+        if st.button("حفظ"):
+            # إضافة للجدول وللرادار
+            st.session_state.machines = pd.concat([st.session_state.machines, pd.DataFrame([{"الماكينة": new_m, "الحالة": "✅ تعمل"}])], ignore_index=True)
+            st.session_state.machine_health[new_m] = {"آخر_صيانة": datetime.now().strftime("%Y-%m-%d"), "عمر_القطعة_افتراضي": 30}
             st.rerun()
 
-# --- التبويب 4: مدير المخزن ---
+# --- التبويب 4: المخزن ---
 with tabs[3]:
     st.header("📦 حركة المخازن")
-    st.info("هنا يتم ربط استهلاك الخامات بالإنتاج (قيد التطوير)")
-    
+    st.info("قيد التطوير - لربط الخامات بالإنتاج")
