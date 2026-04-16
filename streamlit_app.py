@@ -1,102 +1,123 @@
 import streamlit as st
+from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime, timedelta
 
-# 1. إعدادات الأمان والخصوصية
-st.set_page_config(page_title="Enterprise Pro System", layout="wide", page_icon="🔐")
+# 1. إعدادات الصفحة (يجب أن يكون أول سطر)
+st.set_page_config(page_title="نظام Enterprise الذكي", layout="wide", page_icon="🔐")
 
-# --- دالة تسجيل الدخول ---
-def check_password():
-    def password_entered():
-        if st.session_state["username"] == "admin" and st.session_state["password"] == "123":
-            st.session_state["password_correct"] = True
-            del st.session_state["password"]  # مسح الباسورد من الذاكرة للأمان
-            del st.session_state["username"]
-        else:
-            st.session_state["password_correct"] = False
+# 2. بوابة تسجيل الدخول (Username: admin | PW: 123)
+def login():
+    if "logged_in" not in st.session_state:
+        st.session_state.logged_in = False
 
-    if "password_correct" not in st.session_state:
-        st.markdown("<h1 style='text-align: center;'>🔐 بوابة تسجيل الدخول</h1>", unsafe_allow_html=True)
+    if not st.session_state.logged_in:
+        st.markdown("<h1 style='text-align: center; color: #1E88E5;'>🔐 دخول النظام المركزي</h1>", unsafe_allow_html=True)
         col1, col2, col3 = st.columns([1,2,1])
         with col2:
-            st.text_input("اسم المستخدم", key="username")
-            st.text_input("كلمة المرور", type="password", key="password")
-            st.button("دخول للنظام", on_click=password_entered)
+            user = st.text_input("اسم المستخدم")
+            pw = st.text_input("كلمة المرور", type="password")
+            if st.button("دخول للنظام"):
+                if user == "admin" and pw == "123":
+                    st.session_state.logged_in = True
+                    st.rerun()
+                else:
+                    st.error("بيانات الدخول غير صحيحة")
         return False
-    elif not st.session_state["password_correct"]:
-        st.error("❌ بيانات الدخول غير صحيحة")
-        return False
+    return True
+
+# 3. محرك التوصيات الذكي للصيانة
+def get_maintenance_advice(machine_name, last_fix_details):
+    details = str(last_fix_details).lower()
+    if "سير" in details or "ترس" in details or "بلي" in details:
+        return "🛠️ التوصية المسبقة: فحص مستويات التشحيم، ضبط توتر السيور، والتأكد من عدم وجود ضجيج في كراسي التحميل."
+    elif "زيت" in details or "فلتر" in details or "هيدروليك" in details:
+        return "🛠️ التوصية المسبقة: فحص لزوجة الزيت، تنظيف الفلاتر، والتأكد من عدم وجود تسريب في الخراطيم."
+    elif "كهرباء" in details or "حساس" in details or "سلك" in details:
+        return "🛠️ التوصية المسبقة: تنظيف اللوحة الكهربائية بضغط الهواء، فحص جودة التوصيلات، ومعايرة الحساسات."
     else:
-        return True
+        return "🛠️ التوصية المسبقة: فحص هيكلي شامل، تنظيف الماكينة من الرايش، والتأكد من سلامة وسائل الأمان."
 
-# 2. تشغيل بوابة الأمان
-if check_password():
-    
-    # --- تهيئة الذاكرة (تحدث مرة واحدة بعد الدخول) ---
-    if 'sections' not in st.session_state:
-        st.session_state.sections = ["الرئيسية", "الصيانة", "الموارد البشرية (HR)", "الإنتاج"]
-    
-    if 'hr_db' not in st.session_state:
-        st.session_state.hr_db = pd.DataFrame([{"الموظف": "أحمد علي", "الوظيفة": "فني", "الحالة": "نشط", "الأداء": 90}])
+# 4. تشغيل النظام
+if login():
+    # الربط بجوجل شيتس
+    try:
+        conn = st.connection("gsheets", type=GSheetsConnection)
+        # استبدل الرابط أدناه برابط ملفك الفعلي
+        df = conn.read(spreadsheet="رابط_ملف_جوجل_شيتس_هنا", worksheet="Sheet1")
+    except:
+        st.error("فشل الاتصال بجوجل شيتس. تأكد من الرابط وصلاحيات الوصول.")
+        df = pd.DataFrame(columns=["الماكينة", "تاريخ_آخر_صيانة", "الدورة_بالأيام", "تفاصيل"])
 
-    if 'machines_db' not in st.session_state:
-        st.session_state.machines_db = pd.DataFrame(columns=["الماكينة", "تاريخ_آخر_صيانة", "الدورة_بالأيام", "تفاصيل"])
-
-    # 3. القائمة الجانبية (Sidebar)
-    st.sidebar.title("💎 Enterprise Pro")
-    st.sidebar.success("تم تسجيل الدخول بنجاح")
-    choice = st.sidebar.radio("انتقل إلى القسم:", st.session_state.sections)
+    # القائمة الجانبية
+    st.sidebar.title("🏢 لوحة تحكم الشركة")
+    sections = ["الرئيسية", "الصيانة التنبؤية", "الموارد البشرية", "إعدادات الأقسام"]
+    choice = st.sidebar.radio("انتقل إلى:", sections)
     
     if st.sidebar.button("تسجيل الخروج"):
-        st.session_state["password_correct"] = False
+        st.session_state.logged_in = False
         st.rerun()
 
-    # --- محرك الأقسام الذكي ---
+    # --- القسم: الرئيسية ---
     if choice == "الرئيسية":
-        st.title("🏛️ واجهة الإدارة العليا")
-        st.info("مرحباً بك في نظام إدارة الأصول والكوادر البشرية.")
-        c1, c2, c3 = st.columns(3)
-        c1.metric("عدد الأقسام", len(st.session_state.sections))
-        c2.metric("موظفين نشطين", len(st.session_state.hr_db))
-        c3.metric("تنبيهات الصيانة", len(st.session_state.machines_db))
+        st.title("📊 مركز العمليات الرئيسي")
+        c1, c2 = st.columns(2)
+        c1.metric("إجمالي الماكينات", len(df))
+        c2.metric("حالة النظام", "متصل ✅")
+        st.write("---")
+        st.subheader("📍 نظرة عامة على الأصول")
+        st.dataframe(df, use_container_width=True)
 
-    elif choice == "الصيانة":
-        st.title("🔧 نظام التنبؤ بالأعطال")
-        t1, t2 = st.tabs(["🔮 رادار التوقعات", "⚙️ إدارة الماكينات"])
-        with t1:
-            if st.session_state.machines_db.empty:
-                st.info("لا توجد ماكينات. أضف بيانات من التبويب المجاور.")
+    # --- القسم: الصيانة التنبؤية ---
+    elif choice == "الصيانة التنبؤية":
+        st.title("🔧 نظام التنبؤ بالأعطال الذكي")
+        
+        tab1, tab2 = st.tabs(["🔮 رادار التوقعات", "➕ إضافة سجل جديد"])
+        
+        with tab1:
+            if df.empty:
+                st.info("لا توجد بيانات مسجلة في جوجل شيتس.")
             else:
-                cols = st.columns(3)
-                for i, row in st.session_state.machines_db.iterrows():
-                    last_date = datetime.strptime(row["تاريخ_آخر_صيانة"], "%Y-%m-%d")
+                m_cols = st.columns(3)
+                for i, row in df.iterrows():
+                    # حساب التاريخ
+                    last_date = pd.to_datetime(row["تاريخ_آخر_صيانة"])
                     next_due = last_date + timedelta(days=int(row["الدورة_بالأيام"]))
                     days_left = (next_due - datetime.now()).days
-                    with cols[i % 3]:
-                        if days_left <= 3: st.error(f"🚨 {row['الماكينة']}: خطر عطل خلال {days_left} يوم")
-                        else: st.success(f"✅ {row['الماكينة']}: مستقرة ({days_left} يوم)")
+                    
+                    with m_cols[i % 3]:
+                        st.markdown(f"### ⚙️ {row['الماكينة']}")
+                        if days_left <= 5:
+                            st.error(f"🛑 خطر عطل متوقع خلال {days_left} يوم!")
+                            advice = get_maintenance_advice(row['الماكينة'], row['تفاصيل'])
+                            st.warning(advice)
+                        else:
+                            st.success(f"✅ مستقرة (باقي {days_left} يوم)")
+                        st.caption(f"آخر عمرة: {row['تفاصيل']}")
+                        st.write("---")
 
-        with t2:
-            with st.form("m_form"):
-                name = st.text_input("اسم الماكينة:")
-                d_date = st.date_input("آخر صيانة:")
-                cycle = st.number_input("دورة العطل المتوقعة (أيام):", value=30)
-                details = st.text_area("تفاصيل العمرة الأخيرة:")
-                if st.form_submit_button("حفظ"):
-                    new_m = {"الماكينة": name, "تاريخ_آخر_صيانة": d_date.strftime("%Y-%m-%d"), "الدورة_بالأيام": cycle, "تفاصيل": details}
-                    st.session_state.machines_db = pd.concat([st.session_state.machines_db, pd.DataFrame([new_m])], ignore_index=True)
+        with tab2:
+            st.subheader("📝 تسجيل صيانة جديدة في السحابة")
+            with st.form("add_to_sheets"):
+                name = st.text_input("اسم الماكينة")
+                d_date = st.date_input("تاريخ الصيانة")
+                cycle = st.number_input("دورة العطل (بالأيام)", value=30)
+                details = st.text_area("ماذا تم في الصيانة؟ (سير، زيت، كهرباء...)")
+                
+                if st.form_submit_button("حفظ البيانات للأبد"):
+                    new_row = pd.DataFrame([{
+                        "الماكينة": name, 
+                        "تاريخ_آخر_صيانة": d_date.strftime("%Y-%m-%d"), 
+                        "الدورة_بالأيام": cycle, 
+                        "تفاصيل": details
+                    }])
+                    updated_df = pd.concat([df, new_row], ignore_index=True)
+                    conn.update(spreadsheet="رابط_ملف_جوجل_شيتس_هنا", data=updated_df)
+                    st.success("تم التحديث بنجاح في جوجل شيتس! 🚀")
                     st.rerun()
 
-    elif choice == "الموارد البشرية (HR)":
-        st.title("👥 إدارة الموظفين")
-        tab_h1, tab_h2 = st.tabs(["📋 السجل", "➕ إضافة/حذف"])
-        with tab_h1:
-            st.dataframe(st.session_state.hr_db, use_container_width=True)
-        with tab_h2:
-            with st.form("hr_form"):
-                e_name = st.text_input("الاسم:")
-                e_job = st.text_input("الوظيفة:")
-                if st.form_submit_button("إضافة موظف"):
-                    st.session_state.hr_db = pd.concat([st.session_state.hr_db, pd.DataFrame([{"الموظف": e_name, "الوظيفة": e_job, "الحالة": "نشط", "الأداء": 100}])], ignore_index=True)
-                    st.rerun()
-    
+    # --- باقي الأقسام ---
+    else:
+        st.title(f"📂 قسم {choice}")
+        st.info("هذا القسم قيد البرمجة المخصصة حسب طلب العميل.")
+                        
