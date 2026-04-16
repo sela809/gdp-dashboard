@@ -1,89 +1,69 @@
 import streamlit as st
 import pandas as pd
 
-# 1. إعدادات الصفحة الأساسية
-st.set_page_config(page_title="منظومة الإدارة الشاملة", layout="wide", page_icon="🏢")
+# 1. إعدادات الصفحة
+st.set_page_config(page_title="منظومة الإدارة الذكية", layout="wide", page_icon="🏭")
 
-# تجميل العنوان الرئيسي
-st.markdown("<h1 style='text-align: center; color: #1E88E5;'>🏢 نظام الإدارة والرقابة المتكامل</h1>", unsafe_allow_html=True)
-st.write("---")
+# 2. إنشاء "الذاكرة" للبرنامج (لحفظ الماكينات والأصناف المضافة)
+if 'machines' not in st.session_state:
+    st.session_state.machines = pd.DataFrame([
+        {"الاسم": "ماكينة طباعة 1", "الحالة": "✅ تعمل", "القسم": "الإنتاج"},
+        {"الاسم": "مكبس تجميع", "الحالة": "✅ تعمل", "القسم": "التجميع"}
+    ])
 
-# 2. إنشاء التبويبات لكل قسم (المديرين)
-tabs = st.tabs([
-    "🏠 الرئيسية", 
-    "🏗️ الإنتاج", 
-    "🔧 الصيانة", 
-    "📦 المخزن", 
-    "🛒 المشتريات", 
-    "💰 المبيعات", 
-    "💸 الديون"
-])
+if 'inventory' not in st.session_state:
+    st.session_state.inventory = pd.DataFrame([
+        {"الصنف": "خام بلاستيك", "الكمية": 500, "الوحدة": "كيلو"}
+    ])
 
-# --- التبويب 1: الشاشة الرئيسية ---
+# العنوان الرئيسي
+st.markdown("<h1 style='text-align: center; color: #1E88E5;'>🏭 نظام الإدارة المتكامل (نسخة الحفظ الذكي)</h1>", unsafe_allow_html=True)
+
+tabs = st.tabs(["🏠 الرئيسية", "🏗️ مدير الإنتاج", "🔧 مدير الصيانة", "📦 مدير المخزن", "💸 الديون"])
+
+# --- التبويب 1: الرئيسية (تعرض كل ما تم حفظه) ---
 with tabs[0]:
-    st.info("💡 ملخص حالة المصنع الآن")
-    c1, c2, c3 = st.columns(3)
-    c1.metric("إجمالي إنتاج اليوم", "5,200 قطعة", "+12%")
-    c2.metric("نسبة الهالك العامة", "1.2%", "-0.5%")
-    c3.metric("حالة الماكينات", "90%", "مستقر")
+    st.subheader("📊 ملخص الأصول والإنتاج")
+    col1, col2 = st.columns(2)
+    col1.metric("عدد الماكينات المسجلة", len(st.session_state.machines))
+    col2.metric("أصناف المخزن", len(st.session_state.inventory))
     
-    st.subheader("📋 متابعة الخطوط")
-    st.table({
-        "الخط": ["الطباعة", "التجميع", "التغليف"],
-        "الحالة": ["✅ يعمل", "✅ يعمل", "⚠️ صيانة"],
-        "المسؤول": ["محمد", "أحمد", "سعيد"]
-    })
+    st.write("---")
+    st.write("📍 **قائمة الماكينات الحالية في المصنع:**")
+    st.table(st.session_state.machines)
 
-# --- التبويب 2: مدير الإنتاج ---
+# --- التبويب 2: مدير الإنتاج (إضافة ماكينات جديدة) ---
 with tabs[1]:
-    st.header("🏗️ منطقة مدير الإنتاج")
-    target = st.slider("تحقيق المستهدف اليومي", 0, 100, 75)
-    st.progress(target / 100)
-    st.write(f"تم إنجاز {target}% من خطة اليوم.")
-    
-    # حساب الهالك اللحظي لمدير الإنتاج
-    st.subheader("📉 حساب فاقد الإنتاج")
-    price = st.number_input("سعر الخام", value=150, key="prod_p")
-    waste = st.number_input("الوزن المهدر", value=1, key="prod_w")
-    if st.button("احسب خسارة الإنتاج"):
-        st.error(f"المبلغ الضائع: {price * waste} ج.م")
+    st.header("🏗️ إدارة خطوط الإنتاج")
+    with st.expander("➕ إضافة ماكينة إنتاج جديدة"):
+        new_m_name = st.text_input("اسم الماكينة الجديدة", key="m_prod")
+        if st.button("حفظ الماكينة في النظام"):
+            new_row = {"الاسم": new_m_name, "الحالة": "✅ تعمل", "القسم": "الإنتاج"}
+            st.session_state.machines = pd.concat([st.session_state.machines, pd.DataFrame([new_row])], ignore_index=True)
+            st.success(f"تم تسجيل {new_m_name} في خطوط الإنتاج")
 
-# --- التبويب 3: مدير الصيانة ---
+# --- التبويب 3: مدير الصيانة (إضافة وصيانة) ---
 with tabs[2]:
-    st.header("🔧 منطقة مدير الصيانة")
-    st.warning("🚨 تنبيه: ماكينة التغليف تحتاج عمرة بعد 48 ساعة عمل.")
-    col_a, col_b = st.columns(2)
-    col_a.info("🛠️ بلاغات الأعطال: 2")
-    col_b.success("✅ تم الإصلاح: 5")
+    st.header("🔧 قسم الصيانة")
+    # ميزة التكهين (المسح بالبيع أو التخريد)
+    st.subheader("⚙️ إدارة الماكينات الحالية")
+    m_to_delete = st.selectbox("اختر ماكينة (للبيع أو التكهين):", st.session_state.machines['الاسم'])
+    if st.button("🔴 إتمام عملية التكهين/البيع"):
+        st.session_state.machines = st.session_state.machines[st.session_state.machines['الاسم'] != m_to_delete]
+        st.warning(f"تم إخراج {m_to_delete} من النظام بنجاح")
+        st.rerun()
 
-# --- التبويب 4: مدير المخزن ---
+# --- التبويب 4: مدير المخزن (زيادة الأصناف) ---
 with tabs[3]:
-    st.header("📦 منطقة مدير المخزن")
-    st.subheader("📦 رصيد المواد الخام")
-    st.table({
-        "المادة": ["خام بلاستيك", "أحبار", "كرتون تغليف"],
-        "الكمية": ["4.5 طن", "120 لتر", "800 قطعة"],
-        "الحالة": ["✅ آمن", "⚠️ اطلب قريباً", "🚨 رصيد حرج"]
-    })
-
-# --- التبويب 5: مدير المشتريات ---
-with tabs[4]:
-    st.header("🛒 منطقة مدير المشتريات")
-    st.text_input("بحث عن مورد جديد")
-    st.number_input("تسجيل فاتورة شراء جديدة", min_value=0)
-    st.button("إضافة لدفتر المشتريات")
-
-# --- التبويب 6: مدير المبيعات ---
-with tabs[5]:
-    st.header("💰 منطقة مدير المبيعات")
-    st.bar_chart([50, 80, 45, 90, 100])
-    st.write("📈 منحنى المبيعات الأسبوعي")
-
-# --- التبويب 7: إدارة الديون ---
-with tabs[6]:
-    st.header("💸 ملاحقة المديونيات والتحصيل")
-    cust_name = st.text_input("اسم العميل")
-    amount = st.number_input("المبلغ المطلوب", min_value=0)
-    if st.button("حفظ المديونية"):
-        st.success(f"تم تسجيل {amount} ج.م على {cust_name}")
-        
+    st.header("📦 إدارة المخازن")
+    with st.expander("➕ إضافة صنف جديد للمخزن"):
+        item_name = st.text_input("اسم الخامة")
+        item_qty = st.number_input("الكمية المبدئية", min_value=0)
+        if st.button("تسجيل صنف مخزني"):
+            new_item = {"الصنف": item_name, "الكمية": item_qty, "الوحدة": "كيلو"}
+            st.session_state.inventory = pd.concat([st.session_state.inventory, pd.DataFrame([new_item])], ignore_index=True)
+            st.success(f"تمت إضافة {item_name} للمخزن")
+    
+    st.write("---")
+    st.subheader("📦 الرصيد الحالي")
+    st.table(st.session_state.inventory)
