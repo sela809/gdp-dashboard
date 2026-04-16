@@ -1,0 +1,26 @@
+import streamlit as st
+import pandas as pd
+
+st.set_page_config(page_title="إدارة المديونيات", layout="wide")
+
+st.markdown("<h2 style='text-align: right;'>💸 نظام ملاحقة المديونيات والتحصيل</h2>", unsafe_allow_html=True)
+
+# واجهة إضافة دين جديد
+with st.expander("➕ تسجيل مديونية جديدة"):
+    c1, c2 = st.columns(2)
+    name = c1.text_input("اسم العميل/الشركة")
+    amount = c2.number_input("المبلغ (ج.م)", min_value=0)
+    date = st.date_input("موعد السداد المتوقع")
+    if st.button("حفظ البيانات"):
+        st.success(f"تم جدولة مبلغ {amount} ج.م على {name}. سيتم التذكير في {date}")
+
+st.write("---")
+
+# جدول توضيحي (محاكاة لنقاط الألم)
+st.subheader("📊 كشف الديون العاجلة")
+data = {
+    "العميل": ["شركة الأمل", "مصنع الشرق", "مكتب النجاح"],
+    "المبلغ": ["25,000", "12,000", "45,000"],
+    "الحالة": ["🔴 متأخر", "🟡 قيد التحصيل", "🔴 متأخر جداً"]
+}
+st.table(pd.DataFrame(data))
