@@ -31,9 +31,10 @@ if not st.session_state.logged_in:
         user = st.text_input("المستخدم")
         pw = st.text_input("الكلمة", type="password")
         if st.button("دخول"):
-            if user == "admin" and pw == "123":
-                st.session_state.logged_in = True
-                st.rerun()
+            # التعديل الذكي عشان يقبل حروف كبيرة أو صغيرة
+if user.lower() == "admin" and pw == "123":
+    st.session_state.logged_in = True
+    st.rerun()
             else:
                 st.error("بيانات خطأ")
 else:
